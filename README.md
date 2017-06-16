@@ -2,10 +2,10 @@
 title: "Retail Churn Models"
 output: html_notebook
 ---
-**Author: Demetri Pananos **
+** Author: Demetri Pananos **
 
 
-#Introduction
+# Introduction
 
 Retail churn is different than most other forms of churn.  Every transaction could be that customer's last, or one of a long sequence of transactions.  Normally, churn is a classification problem, but I don't think that classification is appropriate for retail.  For instance, a competitor may open closer to loyal customers, offering them the benefit of saving time.  Thus, these customers have churned without showing any signs.
 
@@ -20,7 +20,7 @@ To do demonstrate my methodology, I'll use retail data obtained from the [UCI Ma
 Let's get started.
 
 
-#Data Munging
+# Data Munging
 
 The first thing we'll have to do is slurp in the data.  Once we do that, we'll find that the rows of the data contain information about products, such as: how many were bought (`Quantity`), the price per unit (`Price`), who bought the product (`Customer ID`), when the product was bought (`InvoiceDate`), and which transaction the product was bought under (`InvoiceNo`).
 
@@ -143,7 +143,7 @@ labs(x = 'Time Since Last Transaction (Days)',y = 'Frequeny')
 
 ![plot of chunk unnamed-chunk-3](figure/unnamed-chunk-3-1.png)
 
-#Computation of the ECDF
+# Computation of the ECDF
  
 I've written a little function to compute the ECDF for each customer.  Then, I can plot each ECDF and draw a line at 0.9.  The time where the ECDF crosses the line is the the approximate 90th percentile.  So if the ECDF crosses our line at 23 days, that means 9 times out of 10 that customer will make another transaction within 23 days.
 
@@ -208,7 +208,7 @@ head(quantiles,10)
 ```
 
 
-#Discussion
+# Discussion
 
 Churn is very different for retailers, which means taking a different approach to modelling churn.  When a customer has churned, their time between transactions is anomalously large, so we should have an idea of what "anomalously" means for each customer.  Using the ECDF, we have estimated the 90th percentile of each customers between transaction time distribution in a non-parametric way. Now, we can examine the last time a customer has transacted, and if the time between then and now is near the 90th percentile (or any percentile you deem appropriate) then we can call them "at risk for churn" and take appropriate action to prevent them from churning.  Best of all, with more data our approach will become better and better since the ECDF converges in distribution to the CDF.
 
