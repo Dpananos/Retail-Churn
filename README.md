@@ -2,7 +2,7 @@
 title: "Retail Churn Models"
 output: html_notebook
 ---
-** Author: Demetri Pananos **
+**Author: Demetri Pananos**
 
 
 
