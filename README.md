@@ -2,13 +2,16 @@
 title: "Retail Churn Models"
 output: html_notebook
 ---
-Author: Demetri Pananos
+**Author: Demetri Pananos **
+
+
+
 
 # Introduction
 
 Retail churn is different than most other forms of churn.  Every transaction could be that customer's last, or one of a long sequence of transactions.  Normally, churn is a classification problem, but I don't think that classification is appropriate for retail.  For instance, a competitor may open closer to loyal customers, offering them the benefit of saving time.  Thus, these customers have churned without showing any signs.
 
-When a customer churns, their between transaction times are large.  Perhaps so large that it may prompt retailers to think "Wow, I haven't seen customer X in a long time".  Can we mathematize this notion of not seeing a customer in a long time?  I think so.
+When a customer churns, their between transaction times are large.  Perhaps so large that it may prompt retailers to think "Wow, I haven't seen customer X in a long time". You could even say the time between transactions is *anomalously large*.  Can we mathematize this notion of not seeing a customer in a long time?  I think so.
 
 I want to be able to make claims like "9 times out of 10, customer X will make another transaction within Y days of his previous transaction".  That way we can know when customers are displaying anomalous behavior.
 
@@ -31,62 +34,11 @@ From there, we can determine the time between transactions for each customer.
 
 ```r
 library(tidyverse)
-```
-
-```
-## Loading tidyverse: ggplot2
-## Loading tidyverse: tibble
-## Loading tidyverse: tidyr
-## Loading tidyverse: readr
-## Loading tidyverse: purrr
-## Loading tidyverse: dplyr
-```
-
-```
-## Conflicts with tidy packages ----------------------------------------------
-```
-
-```
-## filter(): dplyr, stats
-## lag():    dplyr, stats
-```
-
-```r
 library(lubridate)
-```
-
-```
-## 
-## Attaching package: 'lubridate'
-```
-
-```
-## The following object is masked from 'package:base':
-## 
-##     date
-```
-
-```r
 theme_set(theme_minimal())
 
 retail_data = read_csv('~/Documents/R/Online Retail.csv') #Read in the data
-```
 
-```
-## Parsed with column specification:
-## cols(
-##   InvoiceNo = col_character(),
-##   StockCode = col_character(),
-##   Description = col_character(),
-##   Quantity = col_integer(),
-##   InvoiceDate = col_character(),
-##   UnitPrice = col_double(),
-##   CustomerID = col_integer(),
-##   Country = col_character()
-## )
-```
-
-```r
 #Data lists purchases for single transactions amongst many rows.  Group them to see single txns
 
 txns <- retail_data %>% 
@@ -136,11 +88,7 @@ facet_wrap(~CustomerID) +
 labs(x = 'Time Since Last Transaction (Days)',y = 'Frequeny')
 ```
 
-```
-## Joining, by = "CustomerID"
-```
-
-![plot of chunk unnamed-chunk-3](figure/unnamed-chunk-3-1.png)
+![](figure/unnamed-chunk-2-1.png)
 
 # Computation of the ECDF
  
@@ -161,11 +109,7 @@ ggplot(data = ecdf_df %>% inner_join(Ntrans) , aes(dt,e_cdf) ) +
   labs(x = 'Time Since Last Transaction (Days)')
 ```
 
-```
-## Joining, by = "CustomerID"
-```
-
-![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-4-1.png)
+![](figure/unnamed-chunk-3-1.png)
 
 
 ```r
@@ -196,14 +140,24 @@ quantiles = time_between %>%
   summarise(percentile.90= getq(dt)) %>% 
   
   arrange(percentile.90)
-```
 
-```
-## Joining, by = "CustomerID"
-```
-
-```r
 head(quantiles,10)
+```
+
+```
+## # A tibble: 10 x 2
+##    CustomerID percentile.90
+##        <fctr>         <dbl>
+##  1      17841      14.87688
+##  2      14606      20.48264
+##  3      16422      21.65556
+##  4      13089      25.16563
+##  5      14911      25.59924
+##  6      13534      28.04278
+##  7      13113      28.59208
+##  8      14527      28.98194
+##  9      15311      30.40042
+## 10      15189      32.57840
 ```
 
 
