@@ -4,7 +4,7 @@ output:
   md_document:
     variant: markdown_github
 ---
-** Author: Demetri Pananos **
+**Author: Demetri Pananos**
 
 
 ```r
