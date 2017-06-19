@@ -52,7 +52,7 @@ txns <- retail_data %>%
   
         ungroup() %>% 
   
-        filter( Spend<=0,
+        filter( Spend>0,
                 year(InvoiceDate)==2011,
                 month(InvoiceDate)<10) 
         
@@ -72,7 +72,7 @@ time_between <- txns %>%
 Ntrans = txns %>% 
           group_by(CustomerID) %>% 
           summarise(N = n()) %>% 
-          filter(N>10)
+          filter(N>35)
 ```
  
  
@@ -88,7 +88,7 @@ facet_wrap(~CustomerID) +
 labs(x = 'Time Since Last Transaction (Days)',y = 'Frequeny')
 ```
 
-![](figure/unnamed-chunk-2-1.png)
+![](figure/unnamed-chunk-6-1.png)
 
 # Computation of the ECDF
  
@@ -109,7 +109,7 @@ ggplot(data = ecdf_df %>% inner_join(Ntrans) , aes(dt,e_cdf) ) +
   labs(x = 'Time Since Last Transaction (Days)')
 ```
 
-![](figure/unnamed-chunk-3-1.png)
+![](figure/unnamed-chunk-7-1.png)
 
 
 ```r
@@ -148,16 +148,16 @@ head(quantiles,10)
 ## # A tibble: 10 x 2
 ##    CustomerID percentile.90
 ##        <fctr>         <dbl>
-##  1      17841      14.87688
-##  2      14606      20.48264
-##  3      16422      21.65556
-##  4      13089      25.16563
-##  5      14911      25.59924
-##  6      13534      28.04278
-##  7      13113      28.59208
-##  8      14527      28.98194
-##  9      15311      30.40042
-## 10      15189      32.57840
+##  1      14911      4.940833
+##  2      17841      5.073542
+##  3      14606      6.291250
+##  4      12748      6.973056
+##  5      15311      7.011111
+##  6      12971      8.925833
+##  7      14527      9.018056
+##  8      16422     11.015903
+##  9      15039     11.433333
+## 10      13089     12.022639
 ```
 
 

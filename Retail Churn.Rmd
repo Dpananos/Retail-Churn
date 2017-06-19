@@ -56,7 +56,7 @@ txns <- retail_data %>%
   
         ungroup() %>% 
   
-        filter( Spend<=0,
+        filter( Spend>0,
                 year(InvoiceDate)==2011,
                 month(InvoiceDate)<10) 
         
@@ -76,7 +76,7 @@ time_between <- txns %>%
 Ntrans = txns %>% 
           group_by(CustomerID) %>% 
           summarise(N = n()) %>% 
-          filter(N>10)
+          filter(N>35)
 ```
  
  
