@@ -1,21 +1,26 @@
 ---
 title: "Retail Churn Models"
-output: html_notebook
+output:
+  md_document:
+    variant: markdown_github
 ---
-**Author: Demetri Pananos**
+**Author: Demetri Pananos **
 
 
-
+```r
+library(knitr)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE,fig.cap = "", dpi = 400)
+```
 
 # Introduction
 
-Retail churn is different than most other forms of churn.  Every transaction could be that customer's last, or one of a long sequence of transactions.  Normally, churn is a classification problem, but I don't think that classification is appropriate for retail.  For instance, a competitor may open closer to loyal customers, offering them the benefit of saving time.  Thus, these customers have churned without showing any signs.
+Retail churn is different than most other forms of churn since every transaction could be that customer's last, or one of a long sequence of transactions.  Normally, churn is a classification problem, but I don't think that classification is appropriate for non-contractual cases. By means of example, suppose you run a retail hardware store.  A competitor opens closer to your most loyal customers and thus offers them the benefit of saving time.  Your most loyal customers may churn without showing any signs.  A typical classification algorithm would missclassify these customers, and cost your business in the long run.
 
-When a customer churns, their between transaction times are large.  Perhaps so large that it may prompt retailers to think "Wow, I haven't seen customer X in a long time". You could even say the time between transactions is *anomalously large*.  Can we mathematize this notion of not seeing a customer in a long time?  I think so.
+When a customer churns from retail, their between transaction times are large.  Perhaps so large that it may prompt retailers to think "Wow, I haven't seen customer X in a long time". You could even say the time between transactions is *anomalously large*.  Thus, churn modelling in retail is not a classification problem, it is an anomaly detection problem.  In order to determine when your customers are churning or likely to churn, you need to know when they are displaying anomalously large between transaction times.
 
-I want to be able to make claims like "9 times out of 10, customer X will make another transaction within Y days of his previous transaction".  That way we can know when customers are displaying anomalous behavior.
+We first need an idea of what "anomalously" means.  I want to be able to make claims like "9 times out of 10, Customer X will make his next transaction within Y days".  If Customer X does not make another transaction within Y days, we know that there is only a 1 in 10 chance of this happening, and that this behaviour is anomalous.
 
-To do this, we'll need to know the distribution of between transaction times for each customer.  That may be hard, especially if the distribution is bimodal or irregular.  In any case, we can accomplish what we want using the Empirical Cumulative Distribution Function.  Using the ECDF, we can approximate the the quantiles of each customer's between transaction time distribution, and obtain estimates of the nature I have mentioned above.
+To do this, we will need each customer's between transaction time distribution. This may be difficult to estimate, especially if the distribution is multimodal or irregular.  To avoid this difficulty, I'll take a non-parametric approach and use the Empirical Cumulative Distribution Function to approximate the quantiles of each customer's between transaction time distribution.  Once I have the ECDF, I can approximate the 90th percentile, and obtain estimates of the nature I've described above.
 
 To do demonstrate my methodology, I'll use retail data obtained from the [UCI Machine Learning Respository](http://archive.ics.uci.edu/ml/datasets/online+retail).  
 
@@ -26,69 +31,15 @@ Let's get started.
 
 The first thing we'll have to do is slurp in the data.  Once we do that, we'll find that the rows of the data contain information about products, such as: how many were bought (`Quantity`), the price per unit (`Price`), who bought the product (`Customer ID`), when the product was bought (`InvoiceDate`), and which transaction the product was bought under (`InvoiceNo`).
 
-What I really need to know is who bought a product and when.  To do this, I can group by the `Invoice No`, `Customer ID`, and `Invoice Date`.  This will tell me when a customer made a distinct purchase.  We'll have to filter out the returns from the data set.  A return is made when `Quantity<0`, so that is easy enough using `filter`.
-
-From there, we can determine the time between transactions for each customer.
+What I really need to know is who bought a product and when.  To do this, I can group by the `Invoice No`, `Customer ID`, and `Invoice Date`.  This will tell me when a customer made a distinct purchase.  We'll have to filter out the returns from the data set.  A return is made when `Quantity<0`, so that is easy enough using `filter`.  From there, we can determine the time between transactions for each customer.
 
 
 
-```r
-library(tidyverse)
-library(lubridate)
-theme_set(theme_minimal())
-
-retail_data = read_csv('~/Documents/R/Online Retail.csv') #Read in the data
-
-#Data lists purchases for single transactions amongst many rows.  Group them to see single txns
-
-txns <- retail_data %>% 
-  
-        mutate(CustomerID = as.factor(CustomerID),
-               InvoiceDate = ymd_hm(InvoiceDate)) %>% 
-  
-        group_by(CustomerID, InvoiceNo,InvoiceDate) %>% 
-  
-        summarise( Spend = sum(UnitPrice*Quantity)) %>% 
-  
-        ungroup() %>% 
-  
-        filter( Spend>0,
-                year(InvoiceDate)==2011,
-                month(InvoiceDate)<10) 
-        
-#Find time between transactions now
-
-time_between <- txns %>% 
-  
-                arrange(CustomerID,InvoiceDate) %>% 
-
-                group_by(CustomerID) %>% 
-    
-                mutate(dt = as.numeric(InvoiceDate - lag(InvoiceDate), unit=  'days')) %>% 
-          
-                ungroup() %>% 
-          
-                na.omit()
-Ntrans = txns %>% 
-          group_by(CustomerID) %>% 
-          summarise(N = n()) %>% 
-          filter(N>35)
-```
  
  
- Let's visualize the distributions for each customer.  Some distributions look as if they are exponential (which would be really nice because then we could model purchase incidence as a Poisson random variable).  Others are more irregular.  Modelling all these distributions as coming from one separately parameterized distribution would be very difficult.  Our non-parametric method is way easier, as we will see below.
+Let's visualize the distributions for each customer (shown below).  Some distributions look as if they are exponential (which would be really nice because then we could model purchase incidence as a Poisson random variable).  Others are more irregular.  Modelling all these distributions as coming from one separately parameterized distribution would be very difficult.  Our non-parametric method is way easier, as we will see.
 
-```r
-ggplot(data = time_between %>% inner_join(Ntrans), aes(dt)) + 
-  
-geom_histogram(aes(y = ..count../sum(..count..)), bins = 15) +
-
-facet_wrap(~CustomerID) +
-  
-labs(x = 'Time Since Last Transaction (Days)',y = 'Frequeny')
-```
-
-![](figure/unnamed-chunk-6-1.png)
+![](figure/unnamed-chunk-3-1.png)
 
 # Computation of the ECDF
  
@@ -97,52 +48,8 @@ I've written a little function to compute the ECDF for each customer.  Then, I c
 Better yet, we can compute the approximate 90th percentile and display it in a dataframe.
 
 
+![](figure/unnamed-chunk-4-1.png)
 
-```r
-ecdf_df <- time_between %>% group_by(CustomerID) %>% arrange(dt) %>% mutate(e_cdf = 1:length(dt)/length(dt))
-
-ggplot(data = ecdf_df %>% inner_join(Ntrans) , aes(dt,e_cdf) ) + 
-  geom_point(size =0.5) +
-  geom_line() + 
-  geom_hline(yintercept = 0.9, color = 'red') + 
-  facet_wrap(~CustomerID) +
-  labs(x = 'Time Since Last Transaction (Days)')
-```
-
-![](figure/unnamed-chunk-7-1.png)
-
-
-```r
-getq <- function(x,a = 0.9){
-  
-  #Little function to get the alphath quantile
-  if(a>1|a<0){
-    print('Check your quantile')
-  }
-  
-  X <- sort(x)
-  
-  e_cdf <- 1:length(X) / length(X)
-  
-  aprx = approx(e_cdf, X, xout = c(0.9)) #use linear interpolation to approx 90th percentile
-  
-  return(aprx$y)
-}
-
-quantiles = time_between %>% 
-  
-  inner_join(Ntrans) %>% 
-  
-  filter(N>5) %>% 
-  
-  group_by(CustomerID) %>% 
-  
-  summarise(percentile.90= getq(dt)) %>% 
-  
-  arrange(percentile.90)
-
-head(quantiles,10)
-```
 
 ```
 ## # A tibble: 10 x 2
@@ -159,6 +66,8 @@ head(quantiles,10)
 ##  9      15039     11.433333
 ## 10      13089     12.022639
 ```
+
+That's it!  We now know the point when each customer will begin to act "anomalously".  
 
 
 # Discussion
