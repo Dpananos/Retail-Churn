@@ -85,13 +85,27 @@ Ntrans = txns %>%
 Let's visualize the distributions for each customer (shown below).  Some distributions look as if they are exponential (which would be really nice because then we could model purchase incidence as a Poisson random variable).  Others are more irregular.  Modelling all these distributions as coming from one separately parameterized distribution would be very difficult.  Our non-parametric method is way easier, as we will see.
 
 ```{r}
-ggplot(data = time_between %>% inner_join(Ntrans), aes(dt)) + 
+## Helper function for sampling
+sample_n_groups = function(tbl, size, replace = FALSE, weight = NULL) {
+  # regroup when done
+  grps = tbl %>% groups %>% lapply(as.character) %>% unlist
+  # check length of groups non-zero
+  keep = tbl %>% summarise() %>% ungroup() %>% sample_n(size, replace, weight)
+  # keep only selected groups, regroup because joins change count.
+  # regrouping may be unnecessary but joins do something funky to grouping variable
+  tbl %>% right_join(keep, by=grps) %>% group_by_(.dots = grps)
+}
+
+## Let's create a sample to depict
+sample_users <- ecdf_df %>% inner_join(Ntrans) %>% sample_n_groups(20)
+
+ggplot(data = time_between %>% inner_join(Ntrans) %>% filter(CustomerID %in% sample_users$CustomerID), aes(dt)) + 
   
 geom_histogram(aes(y = ..count../sum(..count..)), bins = 15) +
 
 facet_wrap(~CustomerID) +
   
-labs(x = 'Time Since Last Transaction (Days)',y = 'Frequeny')
+labs(x = 'Time Since Last Transaction (Days)',y = 'Frequency')
 
 ```
 
@@ -105,7 +119,7 @@ Better yet, we can compute the approximate 90th percentile and display it in a d
 ```{r}
 ecdf_df <- time_between %>% group_by(CustomerID) %>% arrange(dt) %>% mutate(e_cdf = 1:length(dt)/length(dt))
 
-ggplot(data = ecdf_df %>% inner_join(Ntrans) , aes(dt,e_cdf) ) + 
+ggplot(data = ecdf_df %>% inner_join(Ntrans) %>% filter(CustomerID %in% sample_users$CustomerID), aes(dt,e_cdf) ) + 
   geom_point(size =0.5) +
   geom_line() + 
   geom_hline(yintercept = 0.9, color = 'red') + 
