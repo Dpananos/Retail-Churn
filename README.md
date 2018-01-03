@@ -1,8 +1,4 @@
 
-```r
-library(knitr)
-knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE,fig.cap = "", dpi = 400)
-```
 
 # Introduction
 
