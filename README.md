@@ -1,11 +1,3 @@
----
-title: "Retail Churn Models"
-output:
-  md_document:
-    variant: markdown_github
----
-**Author: Demetri Pananos**
-
 
 ```r
 library(knitr)
